@@ -78,4 +78,4 @@ Target "All" DoNothing
   ==> "RunTests"
   ==> "All"
 
-RunTargetOrDefault "CopyBinaries"
+RunTargetOrDefault "All"
