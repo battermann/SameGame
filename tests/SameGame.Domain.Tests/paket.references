@@ -1,0 +1,7 @@
+﻿NUnit
+NUnit.Runners
+FsUnit
+FSharp.Core
+FSharpx.Extras
+FsCheck.NUnit
+NUnitTestAdapter

@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Same Game | Play</title>
+
+    <link href="/static/style.css" rel="stylesheet" />
+    <link href="/static/site.css" rel="stylesheet" />
+
+    <script src="/static/jquery-1.12.0.min.js"></script>
+</head>
+<body>
+    {% include "_partial_menue.liquid" %}
+
+    <div class="container body-content">
+        <div class="page-header">
+            <h1>Same Game</h1>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <h3>Score <span class="label label-success">{{ model.Score }}</span></h3>
+            </div>
+            <div class="col-md-2">
+                <h3><span class="label label-info">{{ model.status }}</span></h3>
+            </div>
+            <div class="col-md-2">
+                <form id="startover" action="/startover" method="post">
+                    <h3><input type="submit" class="btn btn-default" value="Try again"></h3>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <hr />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <form id="board" action="/play" method="post">
+                    <input type="hidden" name="row" value="">
+                    <input type="hidden" name="col" value="">
+                    <table class="table-bordered">
+                        {% for row in model.board -%}
+                        {%capture r -%}{{ forloop.rindex0 }}{% endcapture -%}
+                        <tr>
+                            {% for cell in row -%}
+                            {%capture c -%}{{ forloop.index0 }}{% endcapture -%}
+                            <td><a href='#' onclick="play({{ r }}, {{ c }})"><div class="square text-center color{{ cell }}"></div></a></td>
+                            {% endfor -%}
+                        </tr>
+                        {% endfor -%}
+                    </table>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        function play(row, col) {
+            var form = document.getElementById("board");
+            form.row.value = row;
+            form.col.value = col;
+            form.submit();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+source https://nuget.org/api/v2
+
+nuget NUnit 
+nuget NUnit.Runners
+nuget FAKE
+nuget Chessie
+nuget FsUnit
+nuget Suave
+nuget Suave.DotLiquid
+nuget FSharpx.Extras
+nuget FsCheck
+nuget FsCheck.NUnit
+nuget NUnitTestAdapter

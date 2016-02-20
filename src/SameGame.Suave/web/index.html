@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Same Game | Home</title>
+
+    <link href="/static/style.css" rel="stylesheet" />
+    <link href="/static/site.css" rel="stylesheet" />
+
+    <script src="/static/jquery-1.12.0.min.js"></script>
+</head>
+<body>
+    {% include "_partial_menue.liquid" %}
+
+    <div class="container body-content">
+        <div class="page-header">
+            <h1>Same Game</h1>
+        </div>
+
+        <form id="create" action="/newgame" method="post">
+            <fieldset class="form-group">
+                <label for="colors">Max. number of colors</label>
+                <select class="form-control" id="colors" name="colors">
+                    <option>3</option>
+                    <option selected="selected">4</option>
+                    <option>5</option>
+                    <option>6</option>
+                    <option>7</option>
+                    <option>8</option>
+                </select>
+            </fieldset>
+            <fieldset class="form-group">
+                <label for="columns">Number of columns</label>
+                <select class="form-control" id="columns" name="columns">
+                    <option>3</option>
+                    <option>4</option>
+                    <option>5</option>
+                    <option>6</option>
+                    <option>7</option>
+                    <option>8</option>
+                    <option>9</option>
+                    <option selected="selected">10</option>
+                    <option>11</option>
+                    <option>12</option>
+                    <option>13</option>
+                    <option>14</option>
+                    <option>15</option>
+                    <option>16</option>
+                    <option>17</option>
+                    <option>18</option>
+                    <option>19</option>
+                    <option>20</option>
+                </select>
+            </fieldset>
+            <fieldset class="form-group">
+                <label for="rows">Number of rows</label>
+                <select class="form-control" id="rows" name="rows">
+                    <option>3</option>
+                    <option>4</option>
+                    <option>5</option>
+                    <option>6</option>
+                    <option>7</option>
+                    <option>8</option>
+                    <option>9</option>
+                    <option selected="selected">10</option>
+                    <option>11</option>
+                    <option>12</option>
+                </select>
+            </fieldset>
+            <p><input type="submit" class="btn btn-info" value="New Game"></p>
+        </form>
+        <hr/>
+        <div class="jumbotron">
+            <h2 class="display-3">Rules</h2>
+            <p>Stones can be removed by selecting a group of adjoining stones of the same color. Stones that were above the removed group will fall down. Empty columns will be trimmed away by columns on the right sliding to the left.</p>
+            <hr class="m-y-2">
+            <h2 class="display-3">Scoring</h2>
+            <p>Score for removing a group of <i>n</i> stones: <i>(n-2)&#0178;</i></p>
+            <p>Bonus for removing all stones from the board: 1000</p>
+        </div>
+    </div>
+</body> 
+</html>
