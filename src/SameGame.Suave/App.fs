@@ -95,30 +95,37 @@ let sameGameAgent api =
         loop None None)
 
 open SameGame.Domain
+open System.Net
 
-let agent = sameGameAgent api
+[<EntryPoint>]
+let main [| port; staticFilesLocation |] =
 
-let play = Interactions.play agent
-let newGame = Interactions.newGame agent
-let startOver() = Interactions.startOver agent
+    let agent = sameGameAgent api
 
-let webDir = IO.Path.Combine(Environment.CurrentDirectory, "..\..\web")
-let style = File.ReadAllText (IO.Path.Combine(webDir, "bootstrap.css"))
-let siteCss = File.ReadAllText (IO.Path.Combine(webDir, "site.css"))
-let jQuery = File.ReadAllText (IO.Path.Combine(webDir, "jquery-1.12.0.min.js"))
+    let play = Interactions.play agent
+    let newGame = Interactions.newGame agent
+    let startOver() = Interactions.startOver agent
 
-let app = 
-    DotLiquid.setTemplatesDir webDir
-    choose 
-        [ GET >=> choose 
-            [ path "/" >=> request (fun _ -> page "index.html" ())
-              path "/static/jquery-1.12.0.min.js" >=> Writers.setMimeType "text/javascript" >=> OK jQuery
-              path "/static/style.css" >=> Writers.setMimeType "text/css" >=> OK style
-              path "/static/site.css" >=> Writers.setMimeType "text/css" >=> OK siteCss ]
-          POST >=> choose 
-            [ path "/newgame" >=> request (fun r -> newGame (r.formData "colors") (r.formData "columns") (r.formData "rows"))
-              path "/startover" >=> request (fun _ -> startOver())
-              path "/play" >=> request (fun r -> play (r.formData "row") (r.formData "col")) ] 
-          RequestErrors.NOT_FOUND "Found no handlers"]
+    let webDir = IO.Path.Combine(Environment.CurrentDirectory, staticFilesLocation)
+    let style = File.ReadAllText (IO.Path.Combine(webDir, "bootstrap.css"))
+    let siteCss = File.ReadAllText (IO.Path.Combine(webDir, "site.css"))
+    let jQuery = File.ReadAllText (IO.Path.Combine(webDir, "jquery-1.12.0.min.js"))
 
-startWebServer defaultConfig app
+    let config = { defaultConfig with bindings = [ HttpBinding.mk HTTP IPAddress.Loopback (uint16 port) ] }
+
+    let app = 
+        DotLiquid.setTemplatesDir webDir
+        choose 
+            [ GET >=> choose 
+                [ path "/" >=> request (fun _ -> page "index.html" ())
+                  path "/static/jquery-1.12.0.min.js" >=> Writers.setMimeType "text/javascript" >=> OK jQuery
+                  path "/static/style.css" >=> Writers.setMimeType "text/css" >=> OK style
+                  path "/static/site.css" >=> Writers.setMimeType "text/css" >=> OK siteCss ]
+              POST >=> choose 
+                [ path "/newgame" >=> request (fun r -> newGame (r.formData "colors") (r.formData "columns") (r.formData "rows"))
+                  path "/startover" >=> request (fun _ -> startOver())
+                  path "/play" >=> request (fun r -> play (r.formData "row") (r.formData "col")) ] 
+              RequestErrors.NOT_FOUND "Found no handlers"]
+
+    startWebServer config app
+    0
