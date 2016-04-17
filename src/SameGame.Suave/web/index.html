@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Same Game | Home</title>
+    <title>Same Game | New Game</title>
 
     <link href="/static/style.css" rel="stylesheet" />
     <link href="/static/site.css" rel="stylesheet" />
@@ -13,9 +13,11 @@
     {% include "_partial_menue.liquid" %}
 
     <div class="container body-content">
-        <div class="page-header">
-            <h1>Same Game</h1>
+        <div class="page-header text-centered">
+            <h1>Same Game <small>New Game</small></h1>
         </div>
+
+        <h2>Board Configuration</h2>
 
         <form id="create" action="/newgame" method="post">
             <fieldset class="form-group">
@@ -69,15 +71,6 @@
             </fieldset>
             <p><input type="submit" class="btn btn-info" value="New Game"></p>
         </form>
-        <hr/>
-        <div class="jumbotron">
-            <h2 class="display-3">Rules</h2>
-            <p>Stones can be removed by selecting a group of adjoining stones of the same color. Stones that were above the removed group will fall down. Empty columns will be trimmed away by columns on the right sliding to the left.</p>
-            <hr class="m-y-2">
-            <h2 class="display-3">Scoring</h2>
-            <p>Score for removing a group of <i>n</i> stones: <i>(n-2)&#0178;</i></p>
-            <p>Bonus for removing all stones from the board: 1000</p>
-        </div>
     </div>
 </body> 
 </html>

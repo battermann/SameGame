@@ -113,11 +113,13 @@ let main [| port; staticFilesLocation |] =
 
     let config = { defaultConfig with bindings = [ HttpBinding.mk HTTP IPAddress.Loopback (uint16 port) ] }
 
+    DotLiquid.setTemplatesDir webDir
+
     let app = 
-        DotLiquid.setTemplatesDir webDir
         choose 
             [ GET >=> choose 
                 [ path "/" >=> request (fun _ -> page "index.html" ())
+                  path "/rules" >=> request (fun _ -> page "rules.html" ())
                   path "/static/jquery-1.12.0.min.js" >=> Writers.setMimeType "text/javascript" >=> OK jQuery
                   path "/static/style.css" >=> Writers.setMimeType "text/css" >=> OK style
                   path "/static/site.css" >=> Writers.setMimeType "text/css" >=> OK siteCss ]
