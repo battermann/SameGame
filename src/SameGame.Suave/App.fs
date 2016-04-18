@@ -11,6 +11,7 @@ open FSharpx
 open SameGame.Types
 
 type BoardVm = {
+    Id:Guid
     Score:int
     Board:int list list
     Status:string }
@@ -19,9 +20,9 @@ type BoardVm = {
 type Agent<'T> = MailboxProcessor<'T>
 
 type SameGameMessage = 
-    | NewGame of GameConfig * AsyncReplyChannel<Game option>
-    | Play of int * int * AsyncReplyChannel<Game option>
-    | StartOver of AsyncReplyChannel<Game option>
+    | NewGame of GameConfig * AsyncReplyChannel<(Guid*Game) option>
+    | Play of Guid * int * int * AsyncReplyChannel<(Guid*Game) option>
+    | StartOver of Guid * AsyncReplyChannel<(Guid*Game) option>
 
 module Interactions =
     open SameGame.Types
@@ -30,9 +31,9 @@ module Interactions =
     let transform (board: int list list) = 
         [for row in [(board.[0].Length - 1)..(-1)..0] do yield ([0..(board.Length - 1)] |> List.map (fun col -> board.[col].[row]))]
 
-    let mapBoardtoVm gameState = 
+    let mapBoardtoVm (id, gameState) = 
         let map b = b |> List.map (fun col -> col |> List.map (function Stone (Color c) -> c | _ -> 0)) |> transform
-        let makeVm gs msg = { BoardVm.Score = gs.Score; Board = map gs.Board; Status = msg }
+        let makeVm gs msg = { Id = id; BoardVm.Score = gs.Score; Board = map gs.Board; Status = msg }
         match gameState with
         | InProgress gs -> makeVm gs "In Progress"
         | Finished gs   -> makeVm gs "Finished"
@@ -44,11 +45,14 @@ module Interactions =
 
     let toInt str = parse str Int32.TryParse
 
-    let play (agent:Agent<SameGameMessage>) (row:Choice<string, string>) (col:Choice<string, string>) = 
+    let toGuid str = parse str Guid.TryParse
+
+    let play (agent:Agent<SameGameMessage>) (id:Choice<string, string>) (row:Choice<string, string>) (col:Choice<string, string>) = 
         let gameOpt = maybe {
+            let! guid = id |> Option.ofChoice |> Option.bind toGuid
             let! c = col |> Option.ofChoice |> Option.bind toInt
             let! r = row |> Option.ofChoice |> Option.bind toInt
-            let! game = agent.PostAndReply(fun replyChannel -> Play (c,r,replyChannel))
+            let! game = agent.PostAndReply(fun replyChannel -> Play (guid, c,r,replyChannel))
             return game }
 
         match gameOpt with
@@ -68,31 +72,53 @@ module Interactions =
         | Some g -> page "play.html"  (g |> mapBoardtoVm)
         | _      -> RequestErrors.BAD_REQUEST "invalid request"
 
-    let startOver (agent:Agent<SameGameMessage>) =
-        agent.PostAndReply(fun replyChannel -> StartOver(replyChannel))
+    let startOver (agent:Agent<SameGameMessage>) (id:Choice<string, string>) =
+        maybe {
+            let! guid = id |> Option.ofChoice |> Option.bind toGuid
+            let! game = agent.PostAndReply(fun replyChannel -> StartOver(guid, replyChannel))
+            return game }
         |> function
             | Some g -> page "play.html" (g |> mapBoardtoVm)
             | _      -> RequestErrors.BAD_REQUEST "invalid request"
 
 let sameGameAgent api = 
+
+    let maxNumberOfGames = 200
+    let days = 1.0
+
+    let filterGames =
+        List.filter (fun (_, ((dt:DateTime),_,_)) -> dt.AddDays(days) > DateTime.Now)
+        >> List.sortBy (fun (_, (dt,_,_)) -> dt)
+        >> List.rev
+        >> fun xs -> if xs |> List.length <= maxNumberOfGames then xs else xs |> List.take maxNumberOfGames
+
     Agent.Start(fun inbox ->
     
-        let rec loop initial game = async {
+        let rec loop map = async {
             let! msg = inbox.Receive()
             match msg with 
             | NewGame (conf, repl) ->
                 let newGame = api.NewGame conf
-                repl.Reply(newGame)
-                return! loop newGame newGame
-            | Play (col, row, repl) ->
-                let newGameState = game |> Option.map (fun g -> api.Play g { Col = col; Row = row })
-                repl.Reply(newGameState)
-                return! loop initial newGameState
-            | StartOver repl -> 
-                repl.Reply(initial)
-                return! loop initial initial }
-
-        loop None None)
+                let id = Guid.NewGuid()
+                repl.Reply(newGame |> Option.map (fun g -> id, g))
+                return! loop (map @ [(id, (DateTime.Now, newGame, newGame))] |> filterGames)
+            | Play (id, col, row, repl) ->
+                let state = Option.maybe {
+                    let! (_, (_, initial, game)) = map |> List.tryFind (fun e -> fst e = id)
+                    let newGameState = game |> Option.map (fun g -> api.Play g { Col = col; Row = row })
+                    return initial, newGameState }
+                match state with
+                | Some s -> do repl.Reply(s |> snd |> Option.map (fun g -> id, g))
+                            return! loop (map |> List.map (fun (key, value) -> if key = id then (key, (DateTime.Now, fst s, snd s)) else (key, value)) |> filterGames)
+                | _      -> do repl.Reply(None)
+                            return! loop (map |> List.filter (fun (key, _) -> key <> id) |> filterGames)
+            | StartOver (id, repl) ->
+                match map.TryFind (fun e -> fst e = id) with
+                | Some (_, (_, initial, _)) -> do repl.Reply(initial |> Option.map (fun g -> id, g))
+                                               return! loop (map |> List.map (fun (key, (dt,initial, game)) -> if key = id then (key,( DateTime.Now, initial, initial)) else (key, (dt, initial, game))) |> filterGames)
+                | _                         -> do repl.Reply(None)
+                                               return! loop (map |> List.filter (fun (key, _) -> key <> id) |> filterGames) }
+        loop [])
 
 open SameGame.Domain
 open System.Net
@@ -104,7 +130,7 @@ let main [| port; staticFilesLocation |] =
 
     let play = Interactions.play agent
     let newGame = Interactions.newGame agent
-    let startOver() = Interactions.startOver agent
+    let startOver = Interactions.startOver agent
 
     let webDir = IO.Path.Combine(Environment.CurrentDirectory, staticFilesLocation)
     let style = File.ReadAllText (IO.Path.Combine(webDir, "bootstrap.css"))
@@ -125,8 +151,8 @@ let main [| port; staticFilesLocation |] =
                   path "/static/site.css" >=> Writers.setMimeType "text/css" >=> OK siteCss ]
               POST >=> choose 
                 [ path "/newgame" >=> request (fun r -> newGame (r.formData "colors") (r.formData "columns") (r.formData "rows"))
-                  path "/startover" >=> request (fun _ -> startOver())
-                  path "/play" >=> request (fun r -> play (r.formData "row") (r.formData "col")) ] 
+                  path "/startover" >=> request (fun r -> startOver(r.formData "gameid"))
+                  path "/play" >=> request (fun r -> play (r.formData "gameid") (r.formData "row") (r.formData "col")) ] 
               RequestErrors.NOT_FOUND "Found no handlers"]
 
     startWebServer config app
