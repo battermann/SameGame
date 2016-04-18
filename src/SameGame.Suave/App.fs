@@ -95,7 +95,7 @@ let sameGameAgent maxNumberOfGames api =
         >> List.rev
         >> fun xs -> 
             if xs |> List.length <= maxNumberOfGames then xs 
-            else xs |> List.take maxNumberOfGames
+            else xs |> Seq.take maxNumberOfGames |> List.ofSeq
 
     let tryFindGame (gameList : (Guid * (DateTime * Game * Game)) list) id = gameList.TryFind (fun (gameId, _) -> gameId = id)
 
