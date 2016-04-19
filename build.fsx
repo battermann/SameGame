@@ -1,22 +1,16 @@
-// --------------------------------------------------------------------------------------
-// FAKE build script
-// --------------------------------------------------------------------------------------
-
+#I @"packages/FAKE/tools/"
 #r @"packages/FAKE/tools/FakeLib.dll"
+
 open Fake
 open System
+open Fake.Azure
 open System.IO
 
-// File system information 
+Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let solutionFile  = "SameGame.sln"
-
-// Pattern specifying assemblies to be tested using NUnit
 let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
-
-// Properties
 let buildDir = "./bin/"
 
-// Helper active pattern for project types
 let (|Fsproj|Csproj|Vbproj|) (projFileName:string) = 
     match projFileName with
     | f when f.EndsWith("fsproj") -> Fsproj
@@ -24,9 +18,6 @@ let (|Fsproj|Csproj|Vbproj|) (projFileName:string) =
     | f when f.EndsWith("vbproj") -> Vbproj
     | _                           -> failwith (sprintf "Project file %s not supported. Unknown project type." projFileName)
 
-// Copies binaries from default VS location to expected bin folder
-// But keeps a subdirectory structure for each project in the 
-// src folder to support multiple project outputs
 Target "CopyBinaries" (fun _ ->
     !! "src/**/*.??proj"
     |>  Seq.map (fun f -> 
@@ -39,24 +30,20 @@ Target "CopyBinaries" (fun _ ->
     |>  Seq.iter (fun (fromDir, toDir) -> CopyDir toDir fromDir (fun _ -> true))
 )
 
-// --------------------------------------------------------------------------------------
-// Clean build results
 
 Target "Clean" (fun _ ->
     CleanDirs ["bin"; "temp"]
 )
 
-// --------------------------------------------------------------------------------------
-// Build library & test project
-
 Target "Build" (fun _ ->
-    !! solutionFile
-    |> MSBuildRelease "" "Rebuild"
-    |> ignore
-)
-
-// --------------------------------------------------------------------------------------
-// Run the unit tests using test runner
+    solutionFile
+    |> MSBuildHelper.build (fun defaults ->
+        { defaults with
+            Verbosity = Some Minimal
+            Targets = [ "Build" ]
+            Properties = [ "Configuration", "Release"
+                           "OutputPath", Kudu.deploymentTemp ] })
+    |> ignore)
 
 Target "RunTests" (fun _ ->
     !! testAssemblies
@@ -67,15 +54,25 @@ Target "RunTests" (fun _ ->
             OutputFile = "TestResults.xml" })
 )
 
-// --------------------------------------------------------------------------------------
-// Run all targets by default. Invoke 'build <Target>' to override
+Target "StageWebsiteAssets" (fun _ ->
+    let blacklist =
+        [ "typings"
+          ".fs"
+          ".config"
+          ".references"
+          "tsconfig.json" ]
+    let shouldInclude (file:string) =
+        blacklist
+        |> Seq.forall(not << file.Contains)
+    Kudu.stageFolder (Path.GetFullPath @"src\SameGame.Suave\web") shouldInclude)
 
-Target "All" DoNothing
+Target "Deploy" Kudu.kuduSync
 
 "Clean"
+  ==> "StageWebsiteAssets"
   ==> "Build"
-  ==> "CopyBinaries"
-  ==> "RunTests"
-  ==> "All"
+  //==> "CopyBinaries"
+  //==> "RunTests"
+  ==> "Deploy"
 
 RunTargetOrDefault "All"
