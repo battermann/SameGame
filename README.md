@@ -1,8 +1,8 @@
 # Same Game
 
-An Implementation of the game "[Same Game](https://de.wikipedia.org/wiki/SameGame)" in F#.
+An implementation of the game "[Same Game](https://de.wikipedia.org/wiki/SameGame)" in F#.
 
-The front end is made with [Suave](https://suave.io/). Very basic just to see something!
+The front end is made with [Suave](https://suave.io/) and [DotLiquid](http://dotliquidmarkup.org/). Not fancy, very basic just to see something!
 
 The application is [running on Azure](http://samegame.azurewebsites.net/) and is deployed directly from GitHub to Azure using Kudu and [Fake](https://fsharp.github.io/FAKE/).
 
