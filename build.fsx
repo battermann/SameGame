@@ -71,8 +71,8 @@ Target "Deploy" Kudu.kuduSync
 "Clean"
   ==> "StageWebsiteAssets"
   ==> "Build"
-  ==> "CopyBinaries"
-  ==> "RunTests"
+  //==> "CopyBinaries"
+  //==> "RunTests"
   ==> "Deploy"
 
 RunTargetOrDefault "Deploy"
