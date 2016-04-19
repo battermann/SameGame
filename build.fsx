@@ -75,4 +75,4 @@ Target "Deploy" Kudu.kuduSync
   //==> "RunTests"
   ==> "Deploy"
 
-RunTargetOrDefault "All"
+RunTargetOrDefault "Deploy"
